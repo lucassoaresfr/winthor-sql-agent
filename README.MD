@@ -1,0 +1,1 @@
+Projeto de teste para consultas de dados via IA no banco de dados.
