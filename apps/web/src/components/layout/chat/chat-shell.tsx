@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { MessageSquareDashed, Loader2 } from "lucide-react";
 import { MessageList } from "./message-list";
 import { Composer } from "./composer";
+import { Button } from "@/components/ui/button";
 import { chatService } from "@/service/sidebar/route";
 import { ChatApi } from "@/service/chat/routes";
 
@@ -21,25 +22,27 @@ const MAX_CONTEXT_MESSAGES = 6;
 
 export function ChatShell() {
   const params = useParams();
-  const urlChatId = params?.id as string | undefined;
+  const chatIdParam = params?.id as string | undefined;
+
+  // 🟢 Mantém o ID do chat ativo localmente para não depender do delay da URL
+  const [activeChatId, setActiveChatId] = useState<string | undefined>(
+    chatIdParam,
+  );
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // 🔴 REF para garantir que o ID do chat ativo seja lido sem depender de re-render
-  const currentChatIdRef = useRef<string | undefined>(urlChatId);
-
-  // Mantém a ref sincronizada sempre que a URL mudar
+  // Sincroniza o activeChatId se a URL mudar (navegação pelo histórico/sidebar)
   useEffect(() => {
-    currentChatIdRef.current = urlChatId;
-  }, [urlChatId]);
+    setActiveChatId(chatIdParam);
+  }, [chatIdParam]);
 
   // 1. Carregar histórico do chat do PostgreSQL ao acessar a rota /chat/[id]
   useEffect(() => {
     async function loadChatHistory() {
-      if (!urlChatId) {
+      if (!activeChatId) {
         setMessages([]);
         setIsLoaded(true);
         setError(null);
@@ -49,7 +52,7 @@ export function ChatShell() {
       try {
         setIsLoaded(false);
         setError(null);
-        const data = await chatService.getChatById(urlChatId);
+        const data = await chatService.getChatById(activeChatId);
         if (data && data.messages) {
           const formattedMessages: Message[] = data.messages.map((m: any) => ({
             id: m.id,
@@ -68,7 +71,7 @@ export function ChatShell() {
     }
 
     loadChatHistory();
-  }, [urlChatId]);
+  }, [activeChatId]);
 
   // 2. Enviar mensagem e persistir no PostgreSQL
   const sendMessage = useCallback(
@@ -79,31 +82,31 @@ export function ChatShell() {
       setError(null);
       setIsStreaming(true);
 
-      // Usa a REF para pegar o chatId mais recente atualizado
-      let activeChatId = currentChatIdRef.current;
+      let currentChatId = activeChatId;
 
       try {
-        // A. Se não existir um chat ativo, cria a sessão no Postgres
-        if (!activeChatId) {
+        // A. Se não existir um chat ativo na URL/estado, cria a sessão no Postgres
+        if (!currentChatId) {
           const newChat = await chatService.createChat({
             user_id: CURRENT_USER_ID,
             title:
               trimmedContent.slice(0, 30) +
               (trimmedContent.length > 30 ? "..." : ""),
           });
+          currentChatId = newChat.id;
 
-          activeChatId = newChat.id;
-          currentChatIdRef.current = newChat.id; // 🟢 Atualiza a REF imediatamente!
+          // 🟢 Atualiza o estado local IMEDIATAMENTE para as próximas mensagens reusarem esse ID
+          setActiveChatId(currentChatId);
 
           // 1. Atualiza a URL sem recarregar a página
-          window.history.replaceState(null, "", `/chat/${activeChatId}`);
+          window.history.replaceState(null, "", `/chat/${currentChatId}`);
 
           // 2. Dispara evento para avisar a Sidebar para recarregar o histórico
           window.dispatchEvent(new Event("chat-created"));
         }
 
         // B. Salvar a mensagem do usuário no banco de dados
-        const userMsgSaved = await chatService.addMessage(activeChatId, {
+        const userMsgSaved = await chatService.addMessage(currentChatId, {
           role: "user",
           content: trimmedContent,
         });
@@ -115,12 +118,8 @@ export function ChatShell() {
           createdAt: new Date(userMsgSaved.created_at),
         };
 
-        // Usa atualização funcional para não depender de stale state em 'messages'
-        let currentMessages: Message[] = [];
-        setMessages((prev) => {
-          currentMessages = [...prev, userMessage];
-          return currentMessages;
-        });
+        const currentMessages = [...messages, userMessage];
+        setMessages(currentMessages);
 
         // C. Processar resposta da IA
         const contextWindow = currentMessages
@@ -137,7 +136,7 @@ export function ChatShell() {
           response.resposta || "Não foi possível obter uma resposta.";
 
         // D. Salvar a resposta da IA no banco de dados
-        const assistantMsgSaved = await chatService.addMessage(activeChatId, {
+        const assistantMsgSaved = await chatService.addMessage(currentChatId, {
           role: "assistant",
           content: respostaTexto,
         });
@@ -157,15 +156,19 @@ export function ChatShell() {
         setIsStreaming(false);
       }
     },
-    [isStreaming], // Removidos chatId e messages das dependências para evitar closures antigas
+    [activeChatId, messages, isStreaming],
   );
 
   // 3. Função de Re-tentativa (Retry)
   const handleRetry = useCallback(async () => {
     if (isStreaming) return;
 
-    const activeChatId = currentChatIdRef.current;
-    if (!activeChatId) {
+    // Se já existem mensagens na conversa, recupera a última enviada pelo usuário
+    const lastUserMessage = [...messages]
+      .reverse()
+      .find((m) => m.role === "user");
+
+    if (!lastUserMessage || !activeChatId) {
       setError(null);
       return;
     }
@@ -174,18 +177,11 @@ export function ChatShell() {
     setIsStreaming(true);
 
     try {
-      let currentMessages: Message[] = [];
-      setMessages((prev) => {
-        currentMessages = prev;
-        return prev;
-      });
-
-      const contextWindow = currentMessages
-        .slice(-MAX_CONTEXT_MESSAGES)
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
+      // Reenvia apenas a janela de contexto para a IA (sem re-salvar a msg do usuário no banco)
+      const contextWindow = messages.slice(-MAX_CONTEXT_MESSAGES).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const response = await ChatApi({ messages: contextWindow });
       if (response.error) throw new Error(response.error);
@@ -193,6 +189,7 @@ export function ChatShell() {
       const respostaTexto =
         response.resposta || "Não foi possível obter uma resposta.";
 
+      // Salva a resposta gerada da IA
       const assistantMsgSaved = await chatService.addMessage(activeChatId, {
         role: "assistant",
         content: respostaTexto,
@@ -212,7 +209,7 @@ export function ChatShell() {
     } finally {
       setIsStreaming(false);
     }
-  }, [isStreaming]);
+  }, [activeChatId, messages, isStreaming]);
 
   return (
     <div className="relative flex flex-col h-full w-full bg-stone-50 overflow-hidden">
