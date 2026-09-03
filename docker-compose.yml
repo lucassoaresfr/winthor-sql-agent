@@ -47,10 +47,10 @@ services:
     container_name: app_backend
     restart: always
     ports:
-      - "4026:8080"
+      - "4026:8081"
     environment:
       #config
-      - PORT=8080
+      - PORT=8081
       - RedisAddr=${RedisAddr}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - API_BASE_URL=${API_BASE_URL}
