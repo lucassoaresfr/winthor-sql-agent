@@ -16,9 +16,22 @@ export interface Message {
   imageData?: string;
 }
 
-const CURRENT_USER_ID = "user";
+interface ChatShellProps {
+  userId: string; // 👈 Recebe o nome/ID dinâmico vindo do token
+}
+
 const MAX_CONTEXT_MESSAGES = 6;
-const WELCOME_CONTENT = `👋 **Olá! Sou o assistente virtual do WinThor.**
+
+export function ChatShell({ userId }: ChatShellProps) {
+  const params = useParams();
+  const chatIdParam = params?.id as string | undefined;
+
+  // Extrai o primeiro nome para personalizar a saudação
+  const primeiroNome = userId ? userId.trim().split(" ")[0] : "";
+
+  const WELCOME_CONTENT = `👋 **Olá${
+    primeiroNome ? `, ${primeiroNome}` : ""
+  }! Sou o assistente virtual do WinThor.**
 
 Posso te ajudar a consultar dados e informações do sistema em tempo real:
 
@@ -32,16 +45,12 @@ Posso te ajudar a consultar dados e informações do sistema em tempo real:
 
 💬 *Como posso te ajudar hoje?*`;
 
-const VIRTUAL_WELCOME_MESSAGE: Message = {
-  id: "welcome-initial",
-  role: "assistant",
-  content: WELCOME_CONTENT,
-  createdAt: new Date(),
-};
-
-export function ChatShell() {
-  const params = useParams();
-  const chatIdParam = params?.id as string | undefined;
+  const VIRTUAL_WELCOME_MESSAGE: Message = {
+    id: "welcome-initial",
+    role: "assistant",
+    content: WELCOME_CONTENT,
+    createdAt: new Date(),
+  };
 
   const [activeChatId, setActiveChatId] = useState<string | undefined>(
     chatIdParam,
@@ -103,10 +112,10 @@ export function ChatShell() {
       let initialMessagesList: Message[] = [...messages];
 
       try {
-        // A. Se não existir um chat ativo, cria a sessão e grava a mensagem de boas-vindas no banco
+        // A. Se não existir um chat ativo, cria a sessão vinculada ao userId real
         if (!currentChatId) {
           const newChat = await chatService.createChat({
-            user_id: CURRENT_USER_ID,
+            user_id: userId, // 🟢 Utiliza a prop dinâmica com o valor do token
             title:
               trimmedContent.slice(0, 30) +
               (trimmedContent.length > 30 ? "..." : ""),
@@ -114,7 +123,7 @@ export function ChatShell() {
           currentChatId = newChat.id;
           setActiveChatId(currentChatId);
 
-          // 🟢 1. Grava a mensagem de boas-vindas do assistente no banco
+          // Grava a mensagem de boas-vindas do assistente no banco
           const welcomeSaved = await chatService.addMessage(currentChatId, {
             role: "assistant",
             content: WELCOME_CONTENT,
@@ -129,7 +138,7 @@ export function ChatShell() {
 
           initialMessagesList = [welcomeMsgObj];
 
-          // Atualiza a URL e a sidebar
+          // Atualiza a URL e dispara o evento para recarregar a sidebar
           window.history.replaceState(null, "", `/chat/${currentChatId}`);
           window.dispatchEvent(new Event("chat-created"));
         }
@@ -150,7 +159,7 @@ export function ChatShell() {
         const updatedMessages = [...initialMessagesList, userMessage];
         setMessages(updatedMessages);
 
-        // C. Processar resposta da IA com o contexto COMPLETO (incluindo a boas-vindas)
+        // C. Processar resposta da IA com a janela de contexto
         const contextWindow = updatedMessages
           .slice(-MAX_CONTEXT_MESSAGES)
           .map((m) => ({
@@ -185,7 +194,7 @@ export function ChatShell() {
         setIsStreaming(false);
       }
     },
-    [activeChatId, messages, isStreaming],
+    [activeChatId, messages, isStreaming, userId, WELCOME_CONTENT],
   );
 
   // 3. Função de Re-tentativa (Retry)
@@ -237,7 +246,7 @@ export function ChatShell() {
     }
   }, [activeChatId, messages, isStreaming]);
 
-  // 🟢 Se estiver na rota inicial (sem chat ativo) e sem mensagens, exibe a mensagem de boas-vindas virtualmente
+  // Se estiver na rota inicial (sem chat ativo) e sem mensagens, exibe a mensagem de boas-vindas virtualmente
   const displayMessages =
     messages.length === 0 && !activeChatId
       ? [VIRTUAL_WELCOME_MESSAGE]
