@@ -71,15 +71,22 @@ services:
       - app-network
 
   # Frontend Web (ex: Next.js / React)
+  # Frontend Web (ex: Next.js / React)
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_ORCHESTRATOR_TOKEN=${API_AUTH_TOKEN_BACKEND}
+        - NEXT_PUBLIC_API_AUTH_TOKEN=${API_AUTH_TOKEN}
     image: winthor-ia/web:${APP_VERSION:-latest}
     container_name: app_web
     restart: always
     ports:
       - "4027:3000"
+    environment:
+      - NEXT_PUBLIC_ORCHESTRATOR_TOKEN=${API_AUTH_TOKEN_BACKEND}
+      - NEXT_PUBLIC_API_AUTH_TOKEN=${API_AUTH_TOKEN}
     deploy:
       resources:
         limits:

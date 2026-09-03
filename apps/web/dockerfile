@@ -26,6 +26,13 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# 🟢 ARGUMENTS DE BUILD DO NEXT.JS
+ARG NEXT_PUBLIC_ORCHESTRATOR_TOKEN
+ARG NEXT_PUBLIC_API_AUTH_TOKEN
+
+ENV NEXT_PUBLIC_ORCHESTRATOR_TOKEN=$NEXT_PUBLIC_ORCHESTRATOR_TOKEN
+ENV NEXT_PUBLIC_API_AUTH_TOKEN=$NEXT_PUBLIC_API_AUTH_TOKEN
+
 # 🟢 Garante que as dependências estejam perfeitamente alinhadas e builda
 RUN pnpm install --frozen-lockfile && pnpm run build
 
