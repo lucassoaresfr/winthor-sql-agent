@@ -17,7 +17,7 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_SERVICE_NAME={DB_SERVICE_NAME}
+      - DB_SERVICE_NAME=${DB_SERVICE_NAME}
       #postgreSQL
       - PG_HOST=${PG_HOST}
       - PG_USER=${PG_USER}
