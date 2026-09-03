@@ -19,6 +19,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
+import imagelogo from "@/../public/favicon-black.svg";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   userId: string;
@@ -80,7 +81,7 @@ export function AppSidebar({
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-primary-foreground font-bold">
             <Image
-              src="/favicon-black.svg"
+              src={imagelogo}
               alt="Logo Winthor Agent"
               width={20}
               height={20}

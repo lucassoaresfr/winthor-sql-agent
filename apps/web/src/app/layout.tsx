@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import Image from "next/image";
+import logocomal from "@/../public/LOGO-COLORIDA.png";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,17 +38,17 @@ export default function RootLayout({
         <TooltipProvider>
           <SidebarProvider defaultOpen={true}>
             {/* 1. Definir a variant como "sidebar" remove a estrutura estilo cartão floating */}
-            <AppSidebar userId={currentUserId}/>
+            <AppSidebar userId={currentUserId} />
 
             {/* 2. Removemos bordas arredondadas, sombras e margens do SidebarInset */}
             <SidebarInset className="flex flex-col flex-1 h-screen overflow-hidden m-0! rounded-none! shadow-none! border-l">
               <header className="flex h-14 shrink-0 items-center gap-5 border-b px-4 bg-background w-full">
-                <SidebarTrigger className="size-4"/>
+                <SidebarTrigger className="size-4" />
 
                 {/* Substituição do h1 pela Imagem */}
                 <div className="relative flex items-center h-6">
                   <Image
-                    src="/LOGO-COLORIDA.png" // Altere para o caminho da sua imagem na pasta /public
+                    src={logocomal} // Altere para o caminho da sua imagem na pasta /public
                     alt="Winthor Agent AI"
                     width={800} // Ajuste a largura conforme o tamanho do seu logo
                     height={30} // Ajuste a altura proporcionalmente
