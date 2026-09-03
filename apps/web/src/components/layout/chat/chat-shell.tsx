@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { MessageSquareDashed, Loader2 } from "lucide-react";
+import { useParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { MessageList } from "./message-list";
 import { Composer } from "./composer";
-import { Button } from "@/components/ui/button";
 import { chatService } from "@/service/sidebar/route";
 import { ChatApi } from "@/service/chat/routes";
 
@@ -19,12 +18,31 @@ export interface Message {
 
 const CURRENT_USER_ID = "user";
 const MAX_CONTEXT_MESSAGES = 6;
+const WELCOME_CONTENT = `👋 **Olá! Sou o assistente virtual do WinThor.**
+
+Posso te ajudar a consultar dados e informações do sistema em tempo real:
+
+📦 **Produtos e Estoque:** Preços, saldos para venda e categorias (*Departamento/Seção*).
+
+🛒 **Pedidos de Venda:** Status (*Faturado, Liberado, Pendente*), valores e itens do pedido.
+
+🏷️ **Promoções:** Descontos do dia, ofertas ativas e itens em promoção.
+
+🏢 **Clientes e CNPJ:** Consultas cadastrais internas e busca pública na Receita Federal.
+
+💬 *Como posso te ajudar hoje?*`;
+
+const VIRTUAL_WELCOME_MESSAGE: Message = {
+  id: "welcome-initial",
+  role: "assistant",
+  content: WELCOME_CONTENT,
+  createdAt: new Date(),
+};
 
 export function ChatShell() {
   const params = useParams();
   const chatIdParam = params?.id as string | undefined;
 
-  // 🟢 Mantém o ID do chat ativo localmente para não depender do delay da URL
   const [activeChatId, setActiveChatId] = useState<string | undefined>(
     chatIdParam,
   );
@@ -34,12 +52,11 @@ export function ChatShell() {
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sincroniza o activeChatId se a URL mudar (navegação pelo histórico/sidebar)
   useEffect(() => {
     setActiveChatId(chatIdParam);
   }, [chatIdParam]);
 
-  // 1. Carregar histórico do chat do PostgreSQL ao acessar a rota /chat/[id]
+  // 1. Carregar histórico do chat do PostgreSQL ao acessar /chat/[id]
   useEffect(() => {
     async function loadChatHistory() {
       if (!activeChatId) {
@@ -83,9 +100,10 @@ export function ChatShell() {
       setIsStreaming(true);
 
       let currentChatId = activeChatId;
+      let initialMessagesList: Message[] = [...messages];
 
       try {
-        // A. Se não existir um chat ativo na URL/estado, cria a sessão no Postgres
+        // A. Se não existir um chat ativo, cria a sessão e grava a mensagem de boas-vindas no banco
         if (!currentChatId) {
           const newChat = await chatService.createChat({
             user_id: CURRENT_USER_ID,
@@ -94,14 +112,25 @@ export function ChatShell() {
               (trimmedContent.length > 30 ? "..." : ""),
           });
           currentChatId = newChat.id;
-
-          // 🟢 Atualiza o estado local IMEDIATAMENTE para as próximas mensagens reusarem esse ID
           setActiveChatId(currentChatId);
 
-          // 1. Atualiza a URL sem recarregar a página
-          window.history.replaceState(null, "", `/chat/${currentChatId}`);
+          // 🟢 1. Grava a mensagem de boas-vindas do assistente no banco
+          const welcomeSaved = await chatService.addMessage(currentChatId, {
+            role: "assistant",
+            content: WELCOME_CONTENT,
+          });
 
-          // 2. Dispara evento para avisar a Sidebar para recarregar o histórico
+          const welcomeMsgObj: Message = {
+            id: welcomeSaved.id,
+            role: "assistant",
+            content: welcomeSaved.content,
+            createdAt: new Date(welcomeSaved.created_at),
+          };
+
+          initialMessagesList = [welcomeMsgObj];
+
+          // Atualiza a URL e a sidebar
+          window.history.replaceState(null, "", `/chat/${currentChatId}`);
           window.dispatchEvent(new Event("chat-created"));
         }
 
@@ -118,11 +147,11 @@ export function ChatShell() {
           createdAt: new Date(userMsgSaved.created_at),
         };
 
-        const currentMessages = [...messages, userMessage];
-        setMessages(currentMessages);
+        const updatedMessages = [...initialMessagesList, userMessage];
+        setMessages(updatedMessages);
 
-        // C. Processar resposta da IA
-        const contextWindow = currentMessages
+        // C. Processar resposta da IA com o contexto COMPLETO (incluindo a boas-vindas)
+        const contextWindow = updatedMessages
           .slice(-MAX_CONTEXT_MESSAGES)
           .map((m) => ({
             role: m.role,
@@ -163,7 +192,6 @@ export function ChatShell() {
   const handleRetry = useCallback(async () => {
     if (isStreaming) return;
 
-    // Se já existem mensagens na conversa, recupera a última enviada pelo usuário
     const lastUserMessage = [...messages]
       .reverse()
       .find((m) => m.role === "user");
@@ -177,7 +205,6 @@ export function ChatShell() {
     setIsStreaming(true);
 
     try {
-      // Reenvia apenas a janela de contexto para a IA (sem re-salvar a msg do usuário no banco)
       const contextWindow = messages.slice(-MAX_CONTEXT_MESSAGES).map((m) => ({
         role: m.role,
         content: m.content,
@@ -189,7 +216,6 @@ export function ChatShell() {
       const respostaTexto =
         response.resposta || "Não foi possível obter uma resposta.";
 
-      // Salva a resposta gerada da IA
       const assistantMsgSaved = await chatService.addMessage(activeChatId, {
         role: "assistant",
         content: respostaTexto,
@@ -211,12 +237,18 @@ export function ChatShell() {
     }
   }, [activeChatId, messages, isStreaming]);
 
+  // 🟢 Se estiver na rota inicial (sem chat ativo) e sem mensagens, exibe a mensagem de boas-vindas virtualmente
+  const displayMessages =
+    messages.length === 0 && !activeChatId
+      ? [VIRTUAL_WELCOME_MESSAGE]
+      : messages;
+
   return (
     <div className="relative flex flex-col h-full w-full bg-stone-50 overflow-hidden">
       {/* Área de mensagens */}
       <div
         className={`flex-1 ${
-          messages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
+          displayMessages.length > 0 ? "overflow-y-auto" : "overflow-hidden"
         }`}
       >
         {!isLoaded ? (
@@ -225,7 +257,7 @@ export function ChatShell() {
           </div>
         ) : (
           <MessageList
-            messages={messages}
+            messages={displayMessages}
             isStreaming={isStreaming}
             error={error}
             onRetry={handleRetry}

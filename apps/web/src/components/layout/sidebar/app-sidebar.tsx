@@ -17,16 +17,19 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import Image from "next/image";
 import imagelogo from "@/../public/favicon-black.svg";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  userId: string;
+  userId: string; // Recebe o NOME do usuário
+  userLogin?: string; // Login/matrícula opcional para o subtexto
 }
 
 export function AppSidebar({
   userId,
+  userLogin,
   variant = "sidebar",
   ...props
 }: AppSidebarProps) {
@@ -38,6 +41,14 @@ export function AppSidebar({
   const [isPending, startTransition] = useTransition();
 
   const currentChatId = params?.id as string;
+
+  // Extrai as iniciais a partir do NOME enviado em userId
+  const getInitials = (name: string) => {
+    if (!name) return "US";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   const loadChats = useCallback(async () => {
     if (!userId) return;
@@ -55,7 +66,6 @@ export function AppSidebar({
   useEffect(() => {
     loadChats();
 
-    // Escuta o evento customizado disparado no ChatShell ao criar um novo chat
     const handleChatCreated = () => {
       loadChats();
     };
@@ -67,7 +77,6 @@ export function AppSidebar({
     };
   }, [userId, currentChatId, loadChats]);
 
-  // Navega para a raiz (/), deixando a criação da sessão para o envio da primeira mensagem
   const handleCreateNewChat = () => {
     startTransition(() => {
       router.push("/");
@@ -151,6 +160,31 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      {/* Rodapé exibindo Nome (userId) + Avatar com as Iniciais */}
+      <SidebarFooter className="border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          {/* Avatar com as Iniciais do Nome */}
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 font-semibold text-xs border border-emerald-300">
+            {getInitials(userId)}
+          </div>
+
+          {/* Exibição do Nome Completo */}
+          <div className="flex flex-col min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
+            <span
+              className="font-medium text-sm truncate text-stone-800"
+              title={userId}
+            >
+              {userId}
+            </span>
+            {userLogin && (
+              <span className="text-[11px] text-muted-foreground truncate">
+                @{userLogin}
+              </span>
+            )}
+          </div>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }
