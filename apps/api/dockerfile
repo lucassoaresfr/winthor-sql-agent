@@ -25,14 +25,12 @@ WORKDIR /app
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-# Copia apenas o binário gerado e a pasta de configurações (.env)
+# Copia apenas o binário gerado
 COPY --from=builder /app/api .
-COPY --from=builder /app/configs ./configs
-COPY --from=builder /app/public ./public 
 
 RUN mkdir -p /logs && chmod 777 /logs
 
-# Define o fuso horário padrão (ex: América/Recife)
+# Define o fuso horário padrão (América/Recife)
 ENV TZ=America/Recife
 
 EXPOSE 8080
