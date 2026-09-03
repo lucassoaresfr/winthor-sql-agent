@@ -16,6 +16,8 @@ type Produto struct {
 	Fornecedor     *string `json:"fornecedor" gorm:"column:FORNECEDOR"`
 	CodDepto       *int    `json:"coddepto" gorm:"column:CODEPTO"`
 	DescricaoDepto *string `json:"descricao_depto" gorm:"column:DESCRICAO_DEPTO"`
+	CodSecao       *int    `json:"codsecao" gorm:"column:CODSECAO"`
+	DescricaoSecao *string `json:"descricao_secao" gorm:"column:DESCRICAOSECAO"`
 	CodMarca       *int    `json:"codmarca" gorm:"column:CODMARCA"`
 	Marca          *string `json:"marca" gorm:"column:MARCA"`
 	Estoque        float64 `json:"estoque" gorm:"column:ESTOQUE"`
@@ -30,6 +32,8 @@ type FiltroProduto struct {
 	Fornecedor     string `form:"fornecedor"`
 	CodDepto       *int   `form:"coddepto"`
 	DescricaoDepto string `form:"descricao_depto"`
+	CodSecao       *int   `form:"codsecao"`
+	DescricaoSecao string `form:"descricao_secao"`
 	CodMarca       *int   `form:"codmarca"`
 	Marca          string `form:"marca"`
 	ApenasEstoque  *bool  `form:"apenas_estoque"`
@@ -48,6 +52,8 @@ SELECT
     F.FORNECEDOR, 
     P.CODEPTO, 
     D.DESCRICAO AS DESCRICAO_DEPTO,
+    P.CODSEC,
+    S.DESCRICAO AS DESCRICAOSECAO,
     P.CODMARCA,
     M.MARCA,
     (E.QTRESERV - (E.QTBLOQUEADA - E.QTESTGER)) AS ESTOQUE
@@ -55,6 +61,7 @@ FROM PCPRODUT P
 	LEFT JOIN PCFORNEC F ON P.CODFORNEC = F.CODFORNEC
 	LEFT JOIN PCDEPTO D  ON P.CODEPTO = D.CODEPTO
 	LEFT JOIN PCMARCA M  ON P.CODMARCA = M.CODMARCA
+  LEFT JOIN PCSECAO S ON P.CODSEC = S.CODSEC
 	LEFT JOIN PCEST E ON P.CODPROD = E.CODPROD AND E.CODFILIAL = '1'
 WHERE P.DTEXCLUSAO IS NULL`
 
@@ -95,6 +102,14 @@ func (f FiltroProduto) ToSQL() (string, []interface{}) {
 		conditions = append(conditions, "UPPER(D.DESCRICAO) LIKE UPPER(:descricao_depto)")
 		args = append(args, sql.Named("descricao_depto", "%"+strings.TrimSpace(f.DescricaoDepto)+"%"))
 	}
+	if f.CodSecao != nil {
+		conditions = append(conditions, "P.CODSECAO = :codsecao")
+		args = append(args, sql.Named("codsecao", *f.CodSecao))
+	}
+	if strings.TrimSpace(f.DescricaoSecao) != "" {
+		conditions = append(conditions, "UPPER(S.DESCRICAO) LIKE UPPER(:descricao_secao)")
+		args = append(args, sql.Named("descricao_secao", "%"+strings.TrimSpace(f.DescricaoSecao)+"%"))
+	}
 	if f.CodMarca != nil {
 		conditions = append(conditions, "P.CODMARCA = :codmarca")
 		args = append(args, sql.Named("codmarca", *f.CodMarca))
@@ -104,7 +119,7 @@ func (f FiltroProduto) ToSQL() (string, []interface{}) {
 		args = append(args, sql.Named("marca", "%"+strings.TrimSpace(f.Marca)+"%"))
 	}
 	if f.ApenasEstoque != nil && *f.ApenasEstoque {
-		conditions = append(conditions, "NVL(E.QTRESERV - (E.QTBLOQUEADA - E.QTESTGER), 0) > 0")
+		conditions = append(conditions, "(NVL(E.QTESTGER, 0) - NVL(E.QTRESERV, 0) - NVL(E.QTBLOQUEADA, 0)) > 0")
 	}
 
 	query := QueryProdutoBase

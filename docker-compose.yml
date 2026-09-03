@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Serviço da API (ex: Go / Node)
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    image: winthor-ia/api:${APP_VERSION:-latest}
+    container_name: app_api
+    restart: always
+    ports:
+      - "4025:8080"
+    environment:
+      #oracle
+      - DB_HOST={DB_HOST}
+      - DB_PORT={DB_PORT}
+      - DB_USER={DB_USER}
+      - DB_PASSWORD={DB_PASSWORD}
+      #postgreSQL
+      - PG_HOST={PG_HOST}
+      - PG_USER={PG_USER}
+      - PG_PASSWORD{PG_PASSWORD}
+      - PG_DBNAME{PG_DBNAME}
+      #config
+      - API_AUTH_TOKEN={API_AUTH_TOKEN}
+      - GIN_MODE={GIN_MODE}
+
+    networks:
+      - app-network
+
+  # Serviço do Backend secundário / Worker
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    image: winthor-ia/backend:${APP_VERSION:-latest}
+    container_name: app_backend
+    restart: always
+    ports:
+      - "4026:8080"
+    environment: 
+      #config
+      - PORT={PORT}
+      - RedisAddr={RedisAddr}
+      - REDIS_PASSWORD={REDIS_PASSWORD}
+      - API_BASE_URL={API_BASE_URL}
+      #token-api
+      - GEMINI_API_KEY={GEMINI_API_KEY}
+      - API_AUTH_TOKEN={API_AUTH_TOKEN}
+      - API_AUTH_TOKEN_BACKEND{API_AUTH_TOKEN_BACKEND}
+    networks:
+      - app-network
+
+  # Frontend Web (ex: Next.js / React)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    image: winthor-ia/web:${APP_VERSION:-latest}
+    container_name: app_web
+    restart: always
+    ports:
+      - "4027:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

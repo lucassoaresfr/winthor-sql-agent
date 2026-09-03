@@ -1,0 +1,41 @@
+FROM golang:1.26-alpine AS builder
+
+# Instala ferramentas essenciais para baixar dependências, se necessário
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app
+
+# Copia os arquivos de dependências primeiro (aproveita o cache de camadas do Docker)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copia o restante do código-fonte da aplicação
+COPY . .
+
+# Compila o binário otimizado para produção Linux
+# CGO_ENABLED=0 garante que o binário não dependa de nenhuma biblioteca C do sistema host
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o api cmd/main.go
+
+# === ESTÁGIO 2: Execução (A imagem final super leve) ===
+FROM alpine:3.19
+
+WORKDIR /app
+
+# Copia as zonas de fuso horário e certificados de segurança do estágio de build
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+# Copia apenas o binário gerado e a pasta de configurações (.env)
+COPY --from=builder /app/api .
+COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/public ./public 
+
+RUN mkdir -p /logs && chmod 777 /logs
+
+# Define o fuso horário padrão (ex: América/Recife)
+ENV TZ=America/Recife
+
+EXPOSE 8080
+
+# Executa o binário diretamente
+CMD ["./api"]

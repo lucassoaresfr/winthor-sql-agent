@@ -13,7 +13,7 @@ interface MessageListProps {
   isStreaming: boolean;
   error: string | null;
   onRetry: () => void;
-  isLoaded: boolean; // Added isLoaded prop to know when localStorage is loaded
+  isLoaded: boolean;
 }
 
 const LAUNCH_SOUND_URL =
@@ -29,27 +29,21 @@ export function MessageList({
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const rafRef = useRef<number | null>(null);
   const [hasAnimated, setHasAnimated] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const lastScrollRef = useRef<number>(0);
-  const hasPlayedIntroRef = useRef(false); // Track if intro has played
+  const hasPlayedIntroRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoaded) return; // Wait for localStorage to load
+    if (!isLoaded) return;
 
-    // Only animate if no messages were loaded (fresh start)
     if (messages.length === 0 && !hasPlayedIntroRef.current) {
       setHasAnimated(true);
       hasPlayedIntroRef.current = true;
 
       audioRef.current = new Audio(LAUNCH_SOUND_URL);
       audioRef.current.volume = 0.5;
-      audioRef.current.play().catch(() => {
-        // Ignore autoplay errors - browser may block without user interaction
-      });
+      audioRef.current.play().catch(() => {});
     } else if (messages.length > 0) {
-      // Skip animation if messages exist
       setHasAnimated(false);
       hasPlayedIntroRef.current = true;
     }
@@ -63,167 +57,120 @@ export function MessageList({
   }, [isLoaded, messages.length]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    // Immediate scroll to bottom when messages change
-    const container = containerRef.current;
-    container.scrollTop = container.scrollHeight;
-    setAutoScroll(true);
-  }, [messages.length]);
+    if (!containerRef.current || !autoScroll) return;
+    containerRef.current.scrollTo({
+      top: containerRef.current.scrollHeight,
+      behavior: isStreaming ? "smooth" : "auto",
+    });
+  }, [messages, isStreaming, autoScroll]);
 
-  useEffect(() => {
-    if (!isStreaming || !autoScroll || !containerRef.current) {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      return;
-    }
-
-    const container = containerRef.current;
-    lastScrollRef.current = container.scrollTop;
-
-    const smoothScroll = () => {
-      if (!container) return;
-
-      const { scrollHeight, clientHeight } = container;
-      const targetScroll = scrollHeight - clientHeight;
-      const currentScroll = lastScrollRef.current;
-      const diff = targetScroll - currentScroll;
-
-      if (diff > 0.5) {
-        const newScroll = currentScroll + diff * 0.03;
-        lastScrollRef.current = newScroll;
-        container.scrollTop = newScroll;
-      }
-
-      rafRef.current = requestAnimationFrame(smoothScroll);
-    };
-
-    // Start immediately
-    rafRef.current = requestAnimationFrame(smoothScroll);
-
-    return () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [isStreaming, autoScroll]);
-
-  // Detect if user scrolls up to disable auto-scroll
   const handleScroll = () => {
-    if (!containerRef.current || isStreaming) return;
-
+    if (!containerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
     setAutoScroll(isAtBottom);
   };
 
-  const lastMessage = messages[messages.length - 1];
+  const filteredMessages = messages.filter((message, index) => {
+    const isLast = index === messages.length - 1;
+
+    if (
+      isStreaming &&
+      message.role === "assistant" &&
+      isLast &&
+      !message.content
+    ) {
+      return false;
+    }
+
+    if (error && message.role === "assistant" && isLast) {
+      return false;
+    }
+
+    return true;
+  });
+
   const showTypingIndicator =
     isStreaming &&
-    (messages.length === 0 ||
-      lastMessage?.role === "user" ||
-      (lastMessage?.role === "assistant" && lastMessage?.content === ""));
+    (filteredMessages.length === 0 ||
+      filteredMessages[filteredMessages.length - 1]?.role === "user");
 
   if (!isLoaded) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center h-full">
         <AnimatedOrb size={64} />
       </div>
     );
   }
 
+  // ESTADO VAZIO: Centralizado sem rolagem
+  if (filteredMessages.length === 0 && !error && !isStreaming) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center text-stone-400 p-4">
+        <div
+          className={`mb-4 transition-transform duration-500 ${
+            hasAnimated ? "scale-105" : ""
+          }`}
+        >
+          <AnimatedOrb size={110} />
+        </div>
+        <p className="text-lg font-semibold text-stone-800 tracking-tight">
+          Olá! Sou a assistente inteligente da COMAL
+        </p>
+        <p className="text-sm mt-1.5 text-stone-500 max-w-sm leading-relaxed">
+          Como posso ajudar hoje? Consulte pedidos, clientes, estoque ou
+          relatórios da empresa.
+        </p>
+      </div>
+    );
+  }
+
+  // ESTADO COM MENSAGENS
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="absolute inset-0 overflow-y-auto pt-16 pb-32 space-y-4 border-none px-6"
+      className="h-full overflow-y-auto py-6 space-y-4 px-4 md:px-8 scroll-smooth"
       role="log"
       aria-label="Mensagens do chat"
       aria-live="polite"
     >
-      {/* Empty state */}
-      {messages.length === 0 && !error && !isStreaming && (
-        <div className="flex flex-col items-center justify-center h-full text-center text-stone-400">
-          <div className={`mb-4 ${hasAnimated ? "orb-intro" : ""}`}>
-            <AnimatedOrb size={128} />
-          </div>
-          <p
-            className={`text-lg font-medium text-gray-700 ${hasAnimated ? "text-blur-intro" : ""}`}
-          >
-            Olá! Sou a assistente inteligente da COMAL
-          </p>
-          <p
-            className={`text-sm mt-1 text-gray-500 max-w-sm ${hasAnimated ? "text-blur-intro-delay" : ""}`}
-          >
-            Como posso ajudar? Envie uma mensagem para consultar dados, produtos
-            ou informações do sistema.
-          </p>
-        </div>
-      )}
-
-      {/* Messages */}
-      {messages
-        .filter((message) => {
-          // Hide empty assistant messages during streaming - they'll be shown as typing indicator instead
-          if (
+      {filteredMessages.map((message) => (
+        <MessageBubble
+          key={message.id}
+          message={message}
+          isStreaming={
             isStreaming &&
             message.role === "assistant" &&
-            message === lastMessage &&
-            message.content === ""
-          ) {
-            return false;
+            message === filteredMessages[filteredMessages.length - 1]
           }
-          return true;
-        })
-        .map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isStreaming={
-              isStreaming &&
-              message.role === "assistant" &&
-              message === lastMessage
-            }
-          />
-        ))}
+        />
+      ))}
 
       {showTypingIndicator && <TypingIndicator />}
 
-      {/* Error state */}
       {error && (
-        <div
-          className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl"
-          role="alert"
-          style={{
-            boxShadow:
-              "rgba(14, 63, 126, 0.04) 0px 0px 0px 1px, rgba(42, 51, 69, 0.04) 0px 1px 1px -0.5px, rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px, rgba(42, 51, 70, 0.04) 0px 6px 6px -3px, rgba(14, 63, 126, 0.04) 0px 12px 12px -6px, rgba(14, 63, 126, 0.04) 0px 24px 24px -12px",
-          }}
-        >
-          <AlertCircle
-            className="w-5 h-5 text-red-500 shrink-0"
-            aria-hidden="true"
-          />
+        <div className="flex items-center gap-3 p-4 bg-amber-50/80 border border-amber-200/60 rounded-xl shadow-xs">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-800">Ocorreu um erro</p>
-            <p className="text-xs text-red-600 mt-0.5">{error}</p>
+            <p className="text-xs font-semibold text-amber-900">
+              Aviso do Sistema
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">{error}</p>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={onRetry}
-            className="text-red-600 hover:text-red-700 hover:bg-red-100 transition-colors"
-            aria-label="Tentar novamente"
+            className="text-amber-800 hover:bg-amber-100/60 text-xs cursor-pointer"
           >
-            <RefreshCw className="w-4 h-4 mr-1" aria-hidden="true" />
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Tentar novamente
           </Button>
         </div>
       )}
 
-      {/* Scroll anchor */}
-      <div ref={bottomRef} aria-hidden="true" className="h-20" />
+      <div ref={bottomRef} className="h-4" />
     </div>
   );
 }

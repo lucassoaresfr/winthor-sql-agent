@@ -1,0 +1,49 @@
+# syntax=docker.io/docker/dockerfile:1
+
+FROM node:22-alpine AS base
+
+# 1. Instalar dependências
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+
+RUN pnpm install --frozen-lockfile
+
+FROM base AS builder
+WORKDIR /app
+
+# 🟢 Define variáveis de ambiente para desativar interatividade do pnpm
+ENV CI=true
+ENV PNPM_CONFIG_CONFIRM_MODULES_PURGE=false
+
+# Re-instalar pnpm no estágio de build
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# 🟢 Garante que as dependências estejam perfeitamente alinhadas e builda
+RUN pnpm install --frozen-lockfile && pnpm run build
+
+# 3. Runner (Produção)
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
