@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 
+	"github.com/go-redis/redis"
 	"github.com/lucassoaresfr/winthor-sql-agent.git/client"
 	"github.com/lucassoaresfr/winthor-sql-agent.git/config"
 	"github.com/lucassoaresfr/winthor-sql-agent.git/register"
@@ -39,8 +40,14 @@ func (a *Application) Run() {
 	// 2. Inicializa Cliente HTTP
 	apiClient := client.NewAPIClient(a.Config.APIBaseUrl, a.Config.APIAuthToken)
 
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     a.Config.RedisAddr,
+		Password: a.Config.RedisPassword,
+		DB:       0,
+	})
+
 	// 3. Registra todas as dependências e rotas
-	router := register.RegisterDependencies(geminiClient, apiClient, a.Config)
+	router := register.RegisterDependencies(geminiClient, apiClient, a.Config, rdb)
 
 	// 4. Sobe o servidor HTTP
 	log.Printf("Servidor orquestrador rodando na porta %s...", a.Config.Port)

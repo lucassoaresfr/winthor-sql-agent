@@ -1,11 +1,11 @@
 import { ChatApiRequest, ChatApiResponse } from "@/types/chat";
-import { connectDB } from "../connect";
+import { connectIA } from "../connect";
 
 export const ChatApi = async (
   data: ChatApiRequest,
 ): Promise<ChatApiResponse> => {
   try {
-    const api = connectDB();
+    const api = connectIA();
     const token = process.env.NEXT_PUBLIC_ORCHESTRATOR_TOKEN || "";
 
     const response = await api.post<ChatApiResponse>("/chat", data, {

@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lucassoaresfr/winthor-sql-agent.git/engine"
 	"github.com/lucassoaresfr/winthor-sql-agent.git/schema"
 	"github.com/lucassoaresfr/winthor-sql-agent.git/services"
 )
@@ -33,8 +35,20 @@ func (ctrl *ChatController) HandleWebhook(c *gin.Context) {
 
 	resposta, err := ctrl.Service.ProcessarMensagem(ctx, req.Messages)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro interno no backend. Veja o log"})
 		log.Printf("[HandleWebhook]: %v", err)
+
+		// 2. Trata queda total dos modelos / alta demanda do Gemini (HTTP 503)
+		if errors.Is(err, engine.ErrTodosModelosEmCooldown) {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"error": engine.ErrTodosModelosEmCooldown.Error(),
+			})
+			return
+		}
+
+		// 3. Outros erros internos inesperados no backend (HTTP 500)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Ocorreu um erro interno ao processar sua pergunta. Tente novamente em instantes.",
+		})
 		return
 	}
 

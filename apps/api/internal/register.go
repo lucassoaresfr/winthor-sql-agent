@@ -8,24 +8,46 @@ import (
 )
 
 type Handlers struct {
-	Client  *handler.ClientHandler
-	Produto *handler.ProdutosHandler
+	Client    *handler.ClientHandler
+	Produto   *handler.ProdutosHandler
+	Orders    *handler.OrderHandler
+	Promotion *handler.PromotionHandler
+	Chat      *handler.ChatHandler // Adicionado o ChatHandler
 }
 
-func RegisterDependencies(db *gorm.DB) *Handlers {
+// Passamos o dbOracle (*gorm.DB) e o dbPostgres (*gorm.DB)
+func RegisterDependencies(dbOracle *gorm.DB, dbPostgres *gorm.DB) *Handlers {
 
-	//clientes
-	clientRepo := repository.NewClientRepository(db)
+	// clientes (Oracle)
+	clientRepo := repository.NewClientRepository(dbOracle)
 	clientService := service.NewClientService(clientRepo)
 	clientHandler := handler.NewClientHandler(clientService)
 
-	//produtos
-	prodRepo := repository.NewProdRepository(db)
+	// produtos (Oracle)
+	prodRepo := repository.NewProdRepository(dbOracle)
 	prodService := service.NewProdService(prodRepo)
 	prodHandler := handler.NewProdHandler(prodService)
 
+	// pedidos (Oracle)
+	orderRepo := repository.NewOrdersRepository(dbOracle)
+	orderSvc := service.NewOrderService(orderRepo)
+	orderHandler := handler.NewOrderHandler(orderSvc)
+
+	// promoções (Oracle)
+	promotionRepo := repository.NewPromotionRepository(dbOracle)
+	promotionSvc := service.NewPromotionService(promotionRepo)
+	promotionHandler := handler.NewPromotionHandler(promotionSvc)
+
+	// chat-historico (PostgreSQL)
+	chatRepo := repository.NewChatRepository(dbPostgres)
+	chatService := service.NewChatService(chatRepo)
+	chatHandler := handler.NewChatHandler(chatService)
+
 	return &Handlers{
-		Client:  clientHandler,
-		Produto: prodHandler,
+		Client:    clientHandler,
+		Produto:   prodHandler,
+		Orders:    orderHandler,
+		Promotion: promotionHandler,
+		Chat:      chatHandler,
 	}
 }

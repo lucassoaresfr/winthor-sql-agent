@@ -18,7 +18,13 @@ func Start() error {
 		return fmt.Errorf("erro ao conectar no banco Oracle: %w", err)
 	}
 
-	handlers := RegisterDependencies(db)
+	dbPostgres, err := config.NewPostgresDB(&cfg.Postgres)
+	if err != nil {
+		return fmt.Errorf("erro ao conectar no banco PostgreSQL: %w", err)
+	}
+
+	// Passando ambos os bancos de dados
+	handlers := RegisterDependencies(db, dbPostgres)
 
 	router := NewRouter(handlers, cfg)
 

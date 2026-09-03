@@ -13,6 +13,8 @@ type Config struct {
 	APIBaseUrl          string
 	APIAuthToken        string
 	APIAuthTokenBackend string
+	RedisAddr           string
+	RedisPassword       string
 }
 
 func LoadConfig() *Config {
@@ -36,5 +38,14 @@ func LoadConfig() *Config {
 		APIAuthTokenBackend: os.Getenv("API_AUTH_TOKEN_BACKEND"),
 		APIBaseUrl:          apiBaseUrl,
 		APIAuthToken:        os.Getenv("API_AUTH_TOKEN"),
+		RedisAddr:           getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisPassword:       os.Getenv("REDIS_PASSWORD"),
 	}
+}
+
+func getEnv(key, fallback string) string {
+	if val, ok := os.LookupEnv(key); ok && val != "" {
+		return val
+	}
+	return fallback
 }
