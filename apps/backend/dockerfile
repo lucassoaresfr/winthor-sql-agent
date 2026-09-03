@@ -14,7 +14,7 @@ COPY . .
 
 # Compila o binário otimizado para produção Linux
 # CGO_ENABLED=0 garante que o binário não dependa de nenhuma biblioteca C do sistema host
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o api main.go
+RUN GOMAXPROCS=1 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -p 1 -ldflags="-w -s" -o api main.go
 
 # === ESTÁGIO 2: Execução (A imagem final super leve) ===
 FROM alpine:3.19

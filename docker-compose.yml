@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # Serviço da API (ex: Go / Node)
@@ -13,19 +13,26 @@ services:
       - "4025:8080"
     environment:
       #oracle
-      - DB_HOST={DB_HOST}
-      - DB_PORT={DB_PORT}
-      - DB_USER={DB_USER}
-      - DB_PASSWORD={DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
       #postgreSQL
-      - PG_HOST={PG_HOST}
-      - PG_USER={PG_USER}
-      - PG_PASSWORD{PG_PASSWORD}
-      - PG_DBNAME{PG_DBNAME}
+      - PG_HOST=${PG_HOST}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DBNAME=${PG_DBNAME}
       #config
-      - API_AUTH_TOKEN={API_AUTH_TOKEN}
-      - GIN_MODE={GIN_MODE}
-
+      - API_AUTH_TOKEN=${API_AUTH_TOKEN}
+      - GIN_MODE=${GIN_MODE}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     networks:
       - app-network
 
@@ -39,16 +46,24 @@ services:
     restart: always
     ports:
       - "4026:8080"
-    environment: 
+    environment:
       #config
-      - PORT={PORT}
-      - RedisAddr={RedisAddr}
-      - REDIS_PASSWORD={REDIS_PASSWORD}
-      - API_BASE_URL={API_BASE_URL}
+      - PORT=${PORT}
+      - RedisAddr=${RedisAddr}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - API_BASE_URL=${API_BASE_URL}
       #token-api
-      - GEMINI_API_KEY={GEMINI_API_KEY}
-      - API_AUTH_TOKEN={API_AUTH_TOKEN}
-      - API_AUTH_TOKEN_BACKEND{API_AUTH_TOKEN_BACKEND}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - API_AUTH_TOKEN=${API_AUTH_TOKEN}
+      - API_AUTH_TOKEN_BACKEND=${API_AUTH_TOKEN_BACKEND}
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     networks:
       - app-network
 
@@ -62,6 +77,14 @@ services:
     restart: always
     ports:
       - "4027:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1024M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     networks:
       - app-network
 
