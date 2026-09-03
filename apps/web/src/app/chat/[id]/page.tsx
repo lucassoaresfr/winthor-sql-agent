@@ -7,11 +7,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/favicon.svg", // Ícone exibido no Modo Claro
+        url: "/winthor-ia/favicon.svg", // Ícone exibido no Modo Claro
         media: "(prefers-color-scheme: light)",
       },
       {
-        url: "/favicon-black.svg", // Ícone exibido no Modo Escuro
+        url: "/winthor-ia/favicon-black.svg", // Ícone exibido no Modo Escuro
         media: "(prefers-color-scheme: dark)",
       },
     ],
