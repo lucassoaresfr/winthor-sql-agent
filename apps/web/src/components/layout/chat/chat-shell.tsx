@@ -14,6 +14,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
+  imageData?: string;
 }
 
 const CURRENT_USER_ID = "user";
