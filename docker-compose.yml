@@ -26,6 +26,7 @@ services:
       #config
       - API_AUTH_TOKEN=${API_AUTH_TOKEN}
       - GIN_MODE=${GIN_MODE}
+      - PORT=8080
     deploy:
       resources:
         limits:
@@ -49,10 +50,11 @@ services:
       - "4026:8080"
     environment:
       #config
-      - PORT=${PORT}
+      - PORT=8080
       - RedisAddr=${RedisAddr}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - API_BASE_URL=${API_BASE_URL}
+      - GIN_MODE=${GIN_MODE}
       #token-api
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - API_AUTH_TOKEN=${API_AUTH_TOKEN}
