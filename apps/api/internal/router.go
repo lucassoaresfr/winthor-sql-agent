@@ -26,6 +26,8 @@ func NewRouter(handlers *Handlers, cfg *config.Config) *gin.Engine {
 			tools.GET("/orders", handlers.Orders.ListarPedidos)
 			tools.GET("/items", handlers.Orders.ObterPedidoPorNum)
 			tools.GET("/promotion", handlers.Promotion.ListarPromocoes)
+			tools.GET("/launch", handlers.Launch.GetLaunch)
+			tools.GET("/finicial-client", handlers.FinicialClient.HandleList)
 		}
 
 		// -------------------------------------------------------------

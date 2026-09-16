@@ -69,6 +69,8 @@ func (o *Orchestrator) ProcessarPergunta(c context.Context, historico []ChatMess
 					tools.ToolConsultarPromocoes,
 					tools.ToolConsultarPedidos,
 					tools.ToolConsultarItensPedido,
+					tools.ToolConsultarLancamentosFinanceiros,
+					tools.ToolConsultarContasAReceber,
 					tools.ToolConsultarCNPJExterno,
 				},
 			},
@@ -161,6 +163,10 @@ func (o *Orchestrator) ProcessarPergunta(c context.Context, historico []ChatMess
 				jsonBytes, err = o.executarChamadaAPIPedidos(fnCall.Args)
 			case "consultar_itens_pedido_api":
 				jsonBytes, err = o.executarChamadaAPIItensPedido(fnCall.Args)
+			case "consultar_lancamentos_financeiros_api":
+				jsonBytes, err = o.executarChamadaAPILancamentosFinanceiros(fnCall.Args)
+			case "consultar_contas_a_receber_api":
+				jsonBytes, err = o.executarChamadaAPIContasAReceber(fnCall.Args)
 			case "consultar_cnpj_externo":
 				cnpj, _ := fnCall.Args["cnpj"].(string)
 				jsonBytes, err = o.BrasilAPIClient.ConsultarCNPJ(baseCtx, cnpj)
@@ -170,7 +176,7 @@ func (o *Orchestrator) ProcessarPergunta(c context.Context, historico []ChatMess
 
 			if err != nil {
 				log.Printf("[Orchestrator] Erro ao executar a ferramenta %s: %v", fnCall.Name, err)
-				jsonBytes = []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error()))
+				jsonBytes = fmt.Appendf(nil, `{"error": "%s"}`, err.Error())
 			}
 
 			var apiResponse interface{}
@@ -314,6 +320,46 @@ func (o *Orchestrator) executarChamadaAPIPedidos(args map[string]interface{}) ([
 
 func (o *Orchestrator) executarChamadaAPIItensPedido(args map[string]interface{}) ([]byte, error) {
 	baseURL, err := url.Parse("/api/v1/tools/items")
+	if err != nil {
+		return nil, err
+	}
+
+	queryParams := url.Values{}
+	for chave, valor := range args {
+		if valor != nil {
+			valorStr := formatarValorParametro(valor)
+			if valorStr != "" {
+				queryParams.Add(chave, valorStr)
+			}
+		}
+	}
+
+	baseURL.RawQuery = queryParams.Encode()
+	return o.APIClient.ChamarRotaGet(baseURL.String())
+}
+
+func (o *Orchestrator) executarChamadaAPILancamentosFinanceiros(args map[string]interface{}) ([]byte, error) {
+	baseURL, err := url.Parse("/api/v1/tools/launch")
+	if err != nil {
+		return nil, err
+	}
+
+	queryParams := url.Values{}
+	for chave, valor := range args {
+		if valor != nil {
+			valorStr := formatarValorParametro(valor)
+			if valorStr != "" {
+				queryParams.Add(chave, valorStr)
+			}
+		}
+	}
+
+	baseURL.RawQuery = queryParams.Encode()
+	return o.APIClient.ChamarRotaGet(baseURL.String())
+}
+
+func (o *Orchestrator) executarChamadaAPIContasAReceber(args map[string]interface{}) ([]byte, error) {
+	baseURL, err := url.Parse("/api/v1/tools/finicial-client")
 	if err != nil {
 		return nil, err
 	}

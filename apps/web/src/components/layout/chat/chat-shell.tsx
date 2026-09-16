@@ -41,6 +41,8 @@ Posso te ajudar a consultar dados e informações do sistema em tempo real:
 
 🏷️ **Promoções:** Descontos do dia, ofertas ativas e itens em promoção.
 
+💰 **Financeiro (NOVIDADE!):** Contas a pagar (despesas e fornecedores) e contas a receber (títulos e inadimplência).
+
 🏢 **Clientes e CNPJ:** Consultas cadastrais internas e busca pública na Receita Federal.
 
 💬 *Como posso te ajudar hoje?*`;

@@ -437,3 +437,214 @@ var ToolConsultarPromocoes = &genai.FunctionDeclaration{
 		},
 	},
 }
+
+var ToolConsultarLancamentosFinanceiros = &genai.FunctionDeclaration{
+	Name: "consultar_lancamentos_financeiros_api",
+	Description: "Consulta os lançamentos financeiros / contas a pagar no ERP WinThor (PCLANC, PCFORNEC, PCCONTA). " +
+		"Permite filtrar por código/nome do fornecedor, conta gerencial, status do título (PAGO, ATRASADO, A PAGAR), " +
+		"faixas de valor, histórico e intervalos de datas (lançamento, vencimento e pagamento). " +
+		"Se nenhuma data for informada, o sistema aplica por padrão a busca no último mês.",
+	Parameters: &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			// --- Identificadores e Documentos ---
+			"recnum": {
+				Type:        genai.TypeInteger,
+				Description: "Número do registro único/chave primária do lançamento no WinThor (PCLANC.RECNUM).",
+			},
+			"numnota": {
+				Type:        genai.TypeInteger,
+				Description: "Número da Nota Fiscal associada ao lançamento (PCLANC.NUMNOTA).",
+			},
+			"duplic": {
+				Type:        genai.TypeString,
+				Description: "Código ou identificador da duplicata/parcela. Ex: '01', '02', 'A'. Busca parcial.",
+			},
+
+			// --- Fornecedor e Classificação ---
+			"codfornec": {
+				Type:        genai.TypeInteger,
+				Description: "Código do fornecedor no WinThor (PCLANC.CODFORNEC).",
+			},
+			"nome_fornecedor": {
+				Type:        genai.TypeString,
+				Description: "Nome, razão social ou trecho do nome do fornecedor (PCFORNEC.FORNECEDOR). Ex: 'AMBEV', 'NESTLE'. Busca parcial.",
+			},
+			"codconta": {
+				Type:        genai.TypeInteger,
+				Description: "Código da conta gerencial/plano de contas no WinThor (PCLANC.CODCONTA).",
+			},
+			"nome_conta": {
+				Type:        genai.TypeString,
+				Description: "Descrição da conta gerencial/despesa (PCCONTA.CONTA). Ex: 'ENERGIA ELETRICA', 'ALUGUEL', 'FRETE'. Busca parcial.",
+			},
+			"historico": {
+				Type:        genai.TypeString,
+				Description: "Trecho do histórico ou observação digitada no lançamento (PCLANC.HISTORICO). Busca parcial.",
+			},
+			"nomefunc": {
+				Type:        genai.TypeString,
+				Description: "Nome do funcionário ou usuário que efetuou o lançamento no sistema (PCLANC.NOMEFUNC). Busca parcial.",
+			},
+
+			// --- Status do Título ---
+			"status_titulo": {
+				Type:        genai.TypeString,
+				Description: "Situação do título. Opções aceitas: 'PAGO' (já quitados), 'ATRASADO' (vencidos e não pagos), 'A PAGAR' ou 'ABERTO' (a vencer).",
+			},
+
+			// --- Filtros de Intervalo de Datas (Formato YYYY-MM-DD) ---
+			"dtlanc_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial de lançamento no formato 'YYYY-MM-DD'. Ex: '2026-01-01'.",
+			},
+			"dtlanc_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final de lançamento no formato 'YYYY-MM-DD'. Ex: '2026-01-31'.",
+			},
+			"dtvenc_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial do vencimento do título no formato 'YYYY-MM-DD'.",
+			},
+			"dtvenc_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final do vencimento do título no formato 'YYYY-MM-DD'.",
+			},
+			"dtpagto_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial da quitação/pagamento no formato 'YYYY-MM-DD'.",
+			},
+			"dtpagto_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final da quitação/pagamento no formato 'YYYY-MM-DD'.",
+			},
+
+			// --- Filtros de Valor Nominal ---
+			"valor_min": {
+				Type:        genai.TypeNumber,
+				Description: "Valor nominal mínimo do lançamento em reais (PCLANC.VALOR). Ex: 500.00.",
+			},
+			"valor_max": {
+				Type:        genai.TypeNumber,
+				Description: "Valor nominal máximo do lançamento em reais (PCLANC.VALOR). Ex: 10000.00.",
+			},
+
+			// --- Ordenação e Limite ---
+			"ordenar_por": {
+				Type:        genai.TypeString,
+				Description: "Campo de ordenação dos resultados. Opções: 'dtvenc', 'dtlanc', 'dtpagto', 'valor', 'numnota', 'fornecedor'. Padrão: 'dtvenc'.",
+			},
+			"ordem": {
+				Type:        genai.TypeString,
+				Description: "Direção da ordenação: 'ASC' (crescente) ou 'DESC' (decrescente). Padrão: 'DESC'.",
+			},
+			"limite": {
+				Type:        genai.TypeInteger,
+				Description: "Quantidade máxima de registros retornados na consulta. Padrão: 50.",
+			},
+		},
+	},
+}
+
+var ToolConsultarContasAReceber = &genai.FunctionDeclaration{
+	Name: "consultar_contas_a_receber_api",
+	Description: "Consulta os títulos e lançamentos do Contas a Receber no ERP WinThor (PCPREST, PCCLIENT, PCUSUARI). " +
+		"Permite filtrar por código/nome do cliente, código do RCA (vendedor), número da transação de venda, duplicata, cobrança, " +
+		"status do título (PAGO, ATRASADO, ABERTO / A RECEBER), faixas de valor e intervalos de datas (emissão, vencimento e pagamento). " +
+		"Retorna os títulos calculados com juros, multas e dias de atraso, além dos totais agregados.",
+	Parameters: &genai.Schema{
+		Type: genai.TypeObject,
+		Properties: map[string]*genai.Schema{
+			// --- Identificadores e Transações ---
+			"numtransvenda": {
+				Type:        genai.TypeInteger,
+				Description: "Número da transação de venda que gerou o título (PCPREST.NUMTRANSVENDA).",
+			},
+			"duplic": {
+				Type:        genai.TypeInteger,
+				Description: "Número do título/duplicata (PCPREST.DUPLIC).",
+			},
+			"prest": {
+				Type:        genai.TypeString,
+				Description: "Código da prestação/parcela. Ex: '1', '2', 'A'. (PCPREST.PREST).",
+			},
+
+			// --- Entidades (Cliente e Vendedor/RCA) ---
+			"codcli": {
+				Type:        genai.TypeInteger,
+				Description: "Código do cliente no WinThor (PCPREST.CODCLI).",
+			},
+			"cliente": {
+				Type:        genai.TypeString,
+				Description: "Nome ou razão social do cliente para busca parcial (PCCLIENT.CLIENTE).",
+			},
+			"codusur": {
+				Type:        genai.TypeInteger,
+				Description: "Código do RCA/vendedor associado ao título (PCPREST.CODUSUR).",
+			},
+
+			// --- Cobrança e Status ---
+			"codcob": {
+				Type:        genai.TypeString,
+				Description: "Código da cobrança/meio de pagamento no WinThor (PCPREST.CODCOB). Ex: 'BK', 'DEVT', 'DEVP'.",
+			},
+			"status_titulo": {
+				Type:        genai.TypeString,
+				Description: "Filtro pelo status atual do título no sistema.",
+				Enum:        []string{"PAGO", "ATRASADO", "ABERTO", "A RECEBER"},
+			},
+
+			// --- Intervalos de Datas (Formato YYYY-MM-DD) ---
+			"dtemissao_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial de emissão do título no formato YYYY-MM-DD.",
+			},
+			"dtemissao_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final de emissão do título no formato YYYY-MM-DD.",
+			},
+			"dtvenc_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial de vencimento do título no formato YYYY-MM-DD.",
+			},
+			"dtvenc_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final de vencimento do título no formato YYYY-MM-DD.",
+			},
+			"dtpag_inicio": {
+				Type:        genai.TypeString,
+				Description: "Data inicial do pagamento/baixa no formato YYYY-MM-DD.",
+			},
+			"dtpag_fim": {
+				Type:        genai.TypeString,
+				Description: "Data final do pagamento/baixa no formato YYYY-MM-DD.",
+			},
+
+			// --- Intervalos de Valores ---
+			"valor_min": {
+				Type:        genai.TypeNumber,
+				Description: "Valor nominal mínimo da prestação (PCPREST.VALOR).",
+			},
+			"valor_max": {
+				Type:        genai.TypeNumber,
+				Description: "Valor nominal máximo da prestação (PCPREST.VALOR).",
+			},
+
+			// --- Ordenação e Paginação ---
+			"ordenar_por": {
+				Type:        genai.TypeString,
+				Description: "Campo pelo qual os resultados serão ordenados.",
+				Enum:        []string{"dtvenc", "vencimento", "dtemissao", "emissao", "dtpag", "pagamento", "valor", "cliente"},
+			},
+			"ordem": {
+				Type:        genai.TypeString,
+				Description: "Direção da ordenação dos resultados.",
+				Enum:        []string{"ASC", "DESC"},
+			},
+			"limite": {
+				Type:        genai.TypeInteger,
+				Description: "Quantidade máxima de registros a serem retornados pela consulta (Padrão: 50).",
+			},
+		},
+	},
+}

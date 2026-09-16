@@ -2,9 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.79", "painelcomal.duckdns.org"],
-  basePath: "/winthor-ia",
+  // basePath: "/winthor-ia",
+  // assetPrefix: "/winthor-ia",
   output: "standalone",
-  assetPrefix: "/winthor-ia",
+
+  basePath: "/dev-test",
+  assetPrefix: "/dev-test",
 };
 
 export default nextConfig;

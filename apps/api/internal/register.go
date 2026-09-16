@@ -8,11 +8,13 @@ import (
 )
 
 type Handlers struct {
-	Client    *handler.ClientHandler
-	Produto   *handler.ProdutosHandler
-	Orders    *handler.OrderHandler
-	Promotion *handler.PromotionHandler
-	Chat      *handler.ChatHandler // Adicionado o ChatHandler
+	Client         *handler.ClientHandler
+	Produto        *handler.ProdutosHandler
+	Orders         *handler.OrderHandler
+	Promotion      *handler.PromotionHandler
+	Chat           *handler.ChatHandler // Adicionado o ChatHandler
+	Launch         *handler.FinicialHandler
+	FinicialClient *handler.PCPrestHandler
 }
 
 // Passamos o dbOracle (*gorm.DB) e o dbPostgres (*gorm.DB)
@@ -38,16 +40,29 @@ func RegisterDependencies(dbOracle *gorm.DB, dbPostgres *gorm.DB) *Handlers {
 	promotionSvc := service.NewPromotionService(promotionRepo)
 	promotionHandler := handler.NewPromotionHandler(promotionSvc)
 
+	// launch (Oracle)
+	launchRepo := repository.NewFinicialRepository(dbOracle)
+	launchSvc := service.NewFinicialService(launchRepo)
+	launchHandler := handler.NewFinicialHandler(launchSvc)
+
+	// finacial client (Oracle)
+
+	finiClientRepo := repository.NewFinicialClientRepository(dbOracle)
+	finiClientSvc := service.NewPCPresService(finiClientRepo)
+	finiClientHandler := handler.NewPCPrestHandler(finiClientSvc)
+
 	// chat-historico (PostgreSQL)
 	chatRepo := repository.NewChatRepository(dbPostgres)
 	chatService := service.NewChatService(chatRepo)
 	chatHandler := handler.NewChatHandler(chatService)
 
 	return &Handlers{
-		Client:    clientHandler,
-		Produto:   prodHandler,
-		Orders:    orderHandler,
-		Promotion: promotionHandler,
-		Chat:      chatHandler,
+		Client:         clientHandler,
+		Produto:        prodHandler,
+		Orders:         orderHandler,
+		Promotion:      promotionHandler,
+		Chat:           chatHandler,
+		Launch:         launchHandler,
+		FinicialClient: finiClientHandler,
 	}
 }
