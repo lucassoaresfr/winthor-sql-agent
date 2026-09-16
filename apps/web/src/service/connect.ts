@@ -4,7 +4,7 @@ import axios, { AxiosInstance } from "axios";
 export const connectIA = () => {
   const api = axios.create({
     // baseURL: "https://painelcomal.duckdns.org/dev-test/backend/api/v1",
-    baseURL: "https://painelcomal.duckdns.org/dev-test/winthor-ia/backend/api/v1",
+    baseURL: "https://painelcomal.duckdns.org/winthor-ia/backend/api/v1",
     // baseURL: "http://localhost:8081/api/v1",
   });
 
