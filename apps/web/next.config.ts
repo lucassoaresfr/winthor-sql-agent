@@ -8,6 +8,22 @@ const nextConfig: NextConfig = {
 
   // basePath: "/dev-test",
   // assetPrefix: "/dev-test",
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" }, // Bloqueia iframe
+          { key: "X-Content-Type-Options", value: "nosniff" }, // Impede MIME-sniffing
+          { key: "Referrer-Policy", value: "origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

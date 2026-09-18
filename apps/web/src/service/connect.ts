@@ -1,11 +1,12 @@
 import axios, { AxiosInstance } from "axios";
-// import { getApiUrl } from "@/utils/runtime";
+
+export const PAINEL_PAI_API =
+  "https://painelcomal.duckdns.org/painel-test/api/api/permissoes";
 
 export const connectIA = () => {
   const api = axios.create({
-    // baseURL: "https://painelcomal.duckdns.org/dev-test/backend/api/v1",
     baseURL: "https://painelcomal.duckdns.org/winthor-ia/backend/api/v1",
-    // baseURL: "http://localhost:8081/api/v1",
+    withCredentials: true, // ⚠️ Força o navegador a enviar o cookie HttpOnly automaticamente
   });
 
   return api;
@@ -13,10 +14,8 @@ export const connectIA = () => {
 
 export const connectDB = (): AxiosInstance => {
   const instance = axios.create({
-    // baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1",
     baseURL: "https://painelcomal.duckdns.org/winthor-ia/api/api/v1",
-    // baseURL: "https://painelcomal.duckdns.org/dev-test/api/api/v1"
+    withCredentials: true, // ⚠️ Força o navegador a enviar o cookie HttpOnly automaticamente
   });
-
   return instance;
 };
