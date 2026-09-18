@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { Loader2, ShieldAlert } from "lucide-react"; // Use o ícone de sua preferência
+import { Loader2, ShieldAlert } from "lucide-react";
+import { performLogout } from "@/service/auth";
 
 export function ExpiredSession() {
   useEffect(() => {
     const timer = setTimeout(() => {
-      window.location.href = "http://painelcomal:3000";
+      performLogout();
     }, 2500);
 
     return () => clearTimeout(timer);
@@ -26,7 +27,7 @@ export function ExpiredSession() {
           </p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground pt-4">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span>Redirecionando...</span>
         </div>
       </div>
