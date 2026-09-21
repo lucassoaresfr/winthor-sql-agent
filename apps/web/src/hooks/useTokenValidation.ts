@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import axios from "axios";
 
 const VALIDATE_URL =
-  "https://painelcomal.duckdns.org/painel-test/api/api/permissoes/auth/validate";
+  "https://painelcomal.duckdns.org/api/api/permissoes/auth/validate";
 
 export function useTokenValidation(
   intervalInMinutes: number = 1,

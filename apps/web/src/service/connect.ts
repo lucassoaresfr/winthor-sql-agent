@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 
 export const PAINEL_PAI_API =
-  "https://painelcomal.duckdns.org/painel-test/api/api/permissoes";
+  "https://painelcomal.duckdns.org/api/api/permissoes";
 
 export const connectIA = () => {
   const api = axios.create({
