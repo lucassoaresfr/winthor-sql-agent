@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,6 +32,14 @@ export const metadata: Metadata = {
   },
 };
 
+// Evita o zoom automático incômodo ao focar no campo de digitação em mobiles
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default async function RootLayout({
   children,
 }: {
@@ -48,32 +56,37 @@ export default async function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased overflow-hidden`}
     >
-      <body className="h-full w-full bg-background overflow-hidden flex">
+      <body className="h-dvh w-full bg-background overflow-hidden flex">
         <SessionGuard>
           <TooltipProvider>
+            {/* Em telas menores o menu por padrão começa recolhido para dar espaço ao chat */}
             <SidebarProvider defaultOpen={true}>
               <AppSidebar
                 userId={currentUserName}
                 userLogin={currentUserLogin}
               />
 
-              <SidebarInset className="flex flex-col flex-1 h-screen overflow-hidden m-0! rounded-none! shadow-none! border-l">
-                <header className="flex h-14 shrink-0 items-center gap-5 border-b px-4 bg-background w-full">
-                  <SidebarTrigger className="size-4" />
+              <SidebarInset className="flex flex-col flex-1 h-dvh overflow-hidden m-0! rounded-none! shadow-none! border-l-0 sm:border-l">
+                {/* Header Responsivo */}
+                <header className="flex h-14 shrink-0 items-center justify-between sm:justify-start gap-3 sm:gap-5 border-b px-3 sm:px-4 bg-background w-full">
+                  <div className="flex items-center gap-3">
+                    {/* Botão de abrir/fechar a Sidebar bem visível no mobile */}
+                    <SidebarTrigger className="size-8 sm:size-4 p-1 rounded-md border sm:border-none shadow-xs sm:shadow-none" />
 
-                  <div className="relative flex items-center h-6">
-                    <Image
-                      src={logocomal}
-                      alt="Winthor Agent AI"
-                      width={800}
-                      height={30}
-                      className="object-contain h-full w-auto"
-                      priority
-                    />
+                    <div className="relative flex items-center h-5 sm:h-6">
+                      <Image
+                        src={logocomal}
+                        alt="Winthor Agent AI"
+                        width={800}
+                        height={30}
+                        className="object-contain h-full w-auto max-w-30 sm:max-w-none"
+                        priority
+                      />
+                    </div>
                   </div>
                 </header>
 
-                <main className="flex-1 overflow-hidden relative">
+                <main className="flex-1 overflow-hidden relative h-[calc(100dvh-3.5rem)]">
                   {children}
                 </main>
               </SidebarInset>

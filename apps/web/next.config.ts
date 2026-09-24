@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.1.79", "painelcomal.duckdns.org"],
+  allowedDevOrigins: [
+    "192.168.1.79",
+    "painelcomal.duckdns.org",
+    "painelcomalext.duckdns.org",
+  ],
   basePath: "/winthor-ia",
   assetPrefix: "/winthor-ia",
   output: "standalone",
