@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const LOGOUT_URL =
-  "https://painelcomal.duckdns.org/painel-test/api/api/permissoes/auth/logout";
+  "/api/api/permissoes/auth/logout";
 const LOGIN_URL = "/";
 
 // Flag global em memória para impedir requisições/redirecionamentos simultâneos
