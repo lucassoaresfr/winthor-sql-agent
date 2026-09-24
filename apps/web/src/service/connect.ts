@@ -5,7 +5,7 @@ export const PAINEL_PAI_API =
 
 export const connectIA = () => {
   const api = axios.create({
-    baseURL: "https://painelcomal.duckdns.org/winthor-ia/backend/api/v1",
+    baseURL: "/winthor-ia/backend/api/v1",
     withCredentials: true, // ⚠️ Força o navegador a enviar o cookie HttpOnly automaticamente
   });
 
@@ -14,7 +14,7 @@ export const connectIA = () => {
 
 export const connectDB = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: "https://painelcomal.duckdns.org/winthor-ia/api/api/v1",
+    baseURL: "/winthor-ia/api/api/v1",
     withCredentials: true, // ⚠️ Força o navegador a enviar o cookie HttpOnly automaticamente
   });
   return instance;
